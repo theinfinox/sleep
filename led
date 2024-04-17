@@ -1,0 +1,44 @@
+import RPi.GPIO as GPIO
+import time
+
+# Set the GPIO pins for the red, green, blue, and white LEDs
+red_pin = 12
+green_pin = 6
+blue_pin = 16
+#white_pin = 13
+tap_pin = 24
+
+# Define a list of colors and their corresponding GPIO pins
+colors = [red_pin, green_pin, blue_pin]
+current_color_index = 0
+
+# Setup GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(tap_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+for color_pin in colors:
+    GPIO.setup(color_pin, GPIO.OUT)
+    GPIO.output(color_pin, GPIO.LOW)
+
+# Function to change to the next color
+def change_color(channel):
+    global current_color_index
+    # Turn off the current color
+    GPIO.output(colors[current_color_index], GPIO.LOW)
+    # Move to the next color
+    current_color_index = (current_color_index + 1) % len(colors)
+    # Turn on the new color
+    GPIO.output(colors[current_color_index], GPIO.HIGH)
+
+# Add event detection for the tap pin
+GPIO.add_event_detect(tap_pin, GPIO.FALLING, callback=change_color, bouncetime=300)
+
+try:
+    # Initially, turn on the first color (red) when the program starts
+    GPIO.output(colors[current_color_index], GPIO.LOW)
+    while True:
+        # Keep the program running
+        pass
+
+except KeyboardInterrupt:
+    # Clean up GPIO on keyboard interrupt
+    GPIO.cleanup()
