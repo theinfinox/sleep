@@ -1,44 +1,112 @@
 import RPi.GPIO as GPIO
-import time
+from time import sleep
+from random import randint
 
-# Set the GPIO pins for the red, green, blue, and white LEDs
-red_pin = 12
-green_pin = 6
-blue_pin = 16
-#white_pin = 13
-tap_pin = 24
+# Define GPIO pins for RGB LEDs and the button
+RED_PIN = 12
+GREEN_PIN = 6
+BLUE_PIN = 16
+BUTTON_PIN = 24  # Example GPIO pin for the button, change according to your setup
 
-# Define a list of colors and their corresponding GPIO pins
-colors = [red_pin, green_pin, blue_pin]
-current_color_index = 0
-
-# Setup GPIO
+# Initialize GPIO
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(tap_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-for color_pin in colors:
-    GPIO.setup(color_pin, GPIO.OUT)
-    GPIO.output(color_pin, GPIO.LOW)
+GPIO.setup(RED_PIN, GPIO.OUT)
+GPIO.setup(GREEN_PIN, GPIO.OUT)
+GPIO.setup(BLUE_PIN, GPIO.OUT)
+GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Internal pull-up resistor enabled
 
-# Function to change to the next color
-def change_color(channel):
-    global current_color_index
-    # Turn off the current color
-    GPIO.output(colors[current_color_index], GPIO.LOW)
-    # Move to the next color
-    current_color_index = (current_color_index + 1) % len(colors)
-    # Turn on the new color
-    GPIO.output(colors[current_color_index], GPIO.HIGH)
+# PWM initialization
+red_pwm = GPIO.PWM(RED_PIN, 100)  # Frequency set to 100Hz
+green_pwm = GPIO.PWM(GREEN_PIN, 100)
+blue_pwm = GPIO.PWM(BLUE_PIN, 100)
 
-# Add event detection for the tap pin
-GPIO.add_event_detect(tap_pin, GPIO.FALLING, callback=change_color, bouncetime=300)
+# Start PWM with duty cycle 0
+red_pwm.start(0)
+green_pwm.start(0)
+blue_pwm.start(0)
 
+# Define functions for different lighting effects
+def s1():   # Glowing effect red/blue
+    for x in range(0, 101):
+        red_pwm.ChangeDutyCycle(x)
+        blue_pwm.ChangeDutyCycle(100 - x)
+        sleep(0.03)
+    for x in range(100, -1, -1):
+        red_pwm.ChangeDutyCycle(x)
+        blue_pwm.ChangeDutyCycle(100 - x)
+        sleep(0.03)
+
+def s2():   # Random colors
+    red_pwm.ChangeDutyCycle(randint(0, 100))
+    green_pwm.ChangeDutyCycle(randint(0, 100))
+    blue_pwm.ChangeDutyCycle(randint(0, 100))
+    sleep(0.3)
+
+def s5():   # Red only
+    red_pwm.ChangeDutyCycle(100)
+    green_pwm.ChangeDutyCycle(0)
+    blue_pwm.ChangeDutyCycle(0)
+    sleep(1)
+
+def s6():   # Green only
+    red_pwm.ChangeDutyCycle(0)
+    green_pwm.ChangeDutyCycle(100)
+    blue_pwm.ChangeDutyCycle(0)
+    sleep(1)
+
+def s7():   # Blue only
+    red_pwm.ChangeDutyCycle(0)
+    green_pwm.ChangeDutyCycle(0)
+    blue_pwm.ChangeDutyCycle(100)
+    sleep(1)
+
+def s3():   # Three blinks of RGB, one at a time
+    colors = [s5, s6, s7]  # Red, Green, Blue
+    current_color_index = 0
+    
+    for _ in range(3):
+        colors[current_color_index]()
+        current_color_index = (current_color_index + 1) % len(colors)
+
+        # Check if the button is pressed to move to the next color
+        for _ in range(5):  # Check button state for a short duration
+            if GPIO.input(BUTTON_PIN) == GPIO.LOW:
+                break  # Exit the loop if the button is pressed
+            sleep(0.1)  # Check the button state every 0.1 seconds
+
+    s4()  # Switch to s4 after cycling through colors
+
+def s4():   # RGB at full power
+    red_pwm.ChangeDutyCycle(100)
+    green_pwm.ChangeDutyCycle(100)
+    blue_pwm.ChangeDutyCycle(100)
+
+def s0():   # All LEDs off
+    red_pwm.ChangeDutyCycle(0)
+    green_pwm.ChangeDutyCycle(0)
+    blue_pwm.ChangeDutyCycle(0)
+
+# List of lighting effect functions
+duties = [s1, s2, s3, s4, s5, s6, s7, s0]
+
+# Button handling
+def button_callback(channel):
+    global index
+    index = (index + 1) % len(duties)
+    print("Change Program to", index)
+
+# Configure interrupt for the button press
+GPIO.add_event_detect(BUTTON_PIN, GPIO.FALLING, callback=button_callback, bouncetime=200)
+
+# Main loop
+index = 0
 try:
-    # Initially, turn on the first color (red) when the program starts
-    GPIO.output(colors[current_color_index], GPIO.LOW)
     while True:
-        # Keep the program running
-        pass
-
+        duties[index]()
+        sleep(1)  # Adjust this delay as needed
 except KeyboardInterrupt:
-    # Clean up GPIO on keyboard interrupt
+    pass
+finally:
+    # Clean up GPIO
+    GPIO.remove_event_detect(BUTTON_PIN)
     GPIO.cleanup()
