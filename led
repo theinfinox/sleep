@@ -46,35 +46,19 @@ def s5():   # Red only
     red_pwm.ChangeDutyCycle(100)
     green_pwm.ChangeDutyCycle(0)
     blue_pwm.ChangeDutyCycle(0)
-    sleep(1)
+    sleep(0.3)
 
 def s6():   # Green only
     red_pwm.ChangeDutyCycle(0)
     green_pwm.ChangeDutyCycle(100)
     blue_pwm.ChangeDutyCycle(0)
-    sleep(1)
+    sleep(0.3)
 
 def s7():   # Blue only
     red_pwm.ChangeDutyCycle(0)
     green_pwm.ChangeDutyCycle(0)
     blue_pwm.ChangeDutyCycle(100)
-    sleep(1)
-
-def s3():   # Three blinks of RGB, one at a time
-    colors = [s5, s6, s7]  # Red, Green, Blue
-    current_color_index = 0
-    
-    for _ in range(3):
-        colors[current_color_index]()
-        current_color_index = (current_color_index + 1) % len(colors)
-
-        # Check if the button is pressed to move to the next color
-        for _ in range(5):  # Check button state for a short duration
-            if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-                break  # Exit the loop if the button is pressed
-            sleep(0.1)  # Check the button state every 0.1 seconds
-
-    s4()  # Switch to s4 after cycling through colors
+    sleep(0.3)
 
 def s4():   # RGB at full power
     red_pwm.ChangeDutyCycle(100)
@@ -87,7 +71,7 @@ def s0():   # All LEDs off
     blue_pwm.ChangeDutyCycle(0)
 
 # List of lighting effect functions
-duties = [s1, s2, s3, s4, s5, s6, s7, s0]
+duties = [s0, s5, s6, s7, s1, s2, s4, ]
 
 # Button handling
 def button_callback(channel):
@@ -103,7 +87,7 @@ index = 0
 try:
     while True:
         duties[index]()
-        sleep(1)  # Adjust this delay as needed
+        sleep(0.2)  # Adjust this delay as needed
 except KeyboardInterrupt:
     pass
 finally:
